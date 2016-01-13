@@ -12,3 +12,8 @@ Kind of. Maybe my personal access token might not have been the right
 choice because I can't get the name and email address of the users it finds,
 even though I can see that stuff through the web page. Perhaps I need to do
 a more complicated OAuth thing.
+
+## TODO
+I'd like to add a whitelist file and have the program read that into a slice
+maybe. Then for each user check if the username is in the whitelist before
+printing it out
