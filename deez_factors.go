@@ -62,13 +62,23 @@ func main() {
   client := github.NewClient(tc)
 
   // Get a list of org members that don't have 2FA enabled
+  // Need to use a loop because there may be multiple pages
+  // of users.
+  var allUsers []github.User
   options := &github.ListMembersOptions{Filter: "2fa_disabled"}
-  users, _, err := client.Organizations.ListMembers("heroku", options)
+  for {
+    users, response, _ := client.Organizations.ListMembers("heroku", options)
+    allUsers = append(allUsers, users...)
+    if response.NextPage == 0 {
+      break
+    }
+    options.ListOptions.Page = response.NextPage
+  }
 
   // Loop over the list of users and print their name
   // User structs store values as pointers so we need to use
   // the * to get the value
-  for i, v := range users {
+  for i, v := range allUsers {
     // If the user is whitelisted, then move on
     if checkWhiteList(*v.Login, whitelist) {
       continue
@@ -76,7 +86,7 @@ func main() {
     // Try to get more information about the user
     user, _, _ := client.Users.Get(*v.Login)
 
-    fmt.Printf("%02d: ", i)
+    fmt.Printf("%02d: ", i+1)
     fmt.Print(*v.Login, " - ")
 
     if user.Name != nil {
