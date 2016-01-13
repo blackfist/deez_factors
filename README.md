@@ -1,6 +1,6 @@
 # Deez Factors
 Looks for people in the GitHub organization that do not have 2-factor
-authentication turned on
+authentication turned on. Now you can tell your users to `Get Deez Factors!`
 
 ## How to set it up
 You need to set an environment variable, `GITHUB_API_KEY`, either in your
