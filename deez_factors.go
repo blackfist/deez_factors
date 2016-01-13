@@ -31,23 +31,29 @@ func main() {
   // User structs store values as pointers so we need to use
   // the * to get the value
   for _, v := range users {
+    // Try to get more information about the user
+    user, _, _ := client.Users.Get(*v.Login)
+
     fmt.Print(*v.Login, " - ")
 
-    if v.Name != nil {
-      fmt.Print(*v.Name)
+    if user.Name != nil {
+      fmt.Print(*user.Name)
     } else {
       fmt.Print("No Name")
     }
 
     fmt.Print(" - ")
-    if v.Email != nil {
-      fmt.Print(*v.Email)
+    if user.Email != nil {
+      fmt.Print(*user.Email)
     } else {
       fmt.Print("No Email")
     }
 
     fmt.Print("\n")
   }
+
+  user, _, _ := client.Users.Get("abisek")
+  fmt.Println(user)
 
 
 }
