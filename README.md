@@ -6,14 +6,3 @@ authentication turned on
 You need to set an environment variable, `GITHUB_API_KEY`, either in your
 shell or by adding it to a file called `.env` in the format `GITHUB_API_KEY:blahblah`.
 The token I used was a GitHub Personal Access Token. Then you just run the program.
-
-## Does it work?
-Kind of. Maybe my personal access token might not have been the right
-choice because I can't get the name and email address of the users it finds,
-even though I can see that stuff through the web page. Perhaps I need to do
-a more complicated OAuth thing.
-
-## TODO
-I'd like to add a whitelist file and have the program read that into a slice
-maybe. Then for each user check if the username is in the whitelist before
-printing it out
