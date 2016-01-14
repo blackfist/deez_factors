@@ -78,7 +78,12 @@ func main() {
   // Loop over the list of users and print their name
   // User structs store values as pointers so we need to use
   // the * to get the value
-  for i, v := range allUsers {
+
+  // Also need to use a different counter than the one that
+  // comes with range because otherwise when we skip
+  // whitelisted rows we end up with gaps in the numbers
+  counter := 1
+  for _, v := range allUsers {
     // If the user is whitelisted, then move on
     if checkWhiteList(*v.Login, whitelist) {
       continue
@@ -86,7 +91,7 @@ func main() {
     // Try to get more information about the user
     user, _, _ := client.Users.Get(*v.Login)
 
-    fmt.Printf("%02d: ", i+1)
+    fmt.Printf("%02d: ", counter)
     fmt.Print(*v.Login, " - ")
 
     if user.Name != nil {
@@ -103,6 +108,7 @@ func main() {
     }
 
     fmt.Print("\n")
+    counter++
   }
 
 }
