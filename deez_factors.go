@@ -5,6 +5,7 @@ import (
   "log"
   "os"
   "bufio"
+  "strings"
   "github.com/joho/godotenv"
   "github.com/google/go-github/github"
   "golang.org/x/oauth2"
@@ -26,6 +27,10 @@ func readWhitelist(path string) ([]string, error) {
   // Now read it into an array
   scanner := bufio.NewScanner(file)
   for scanner.Scan() {
+    if strings.HasPrefix(scanner.Text(), "#") {
+      // skip lines that start with #
+      continue
+    }
     lines = append(lines, scanner.Text())
   }
   return lines, nil
