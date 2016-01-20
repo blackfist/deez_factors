@@ -6,6 +6,7 @@ import (
   "os"
   "bufio"
   "strings"
+  "flag"
   "github.com/joho/godotenv"
   "github.com/google/go-github/github"
   "golang.org/x/oauth2"
@@ -45,8 +46,18 @@ func checkWhiteList(name string, whitelist []string) (bool) {
   return false
 }
 
+
 func main() {
-  // load environment variables from .env
+  // load environment variables from .env and org from command line
+
+  flag.Parse()
+  if len(flag.Args()) == 0 {
+    fmt.Println("Why you no specify org name? Usage is \"deez_factors org\"")
+    os.Exit(1)
+  }
+
+  org_name := flag.Arg(0)
+
   err := godotenv.Load()
   if err != nil {
     log.Fatal("Error loading .env file")
@@ -72,7 +83,7 @@ func main() {
   var allUsers []github.User
   options := &github.ListMembersOptions{Filter: "2fa_disabled"}
   for {
-    users, response, _ := client.Organizations.ListMembers("heroku", options)
+    users, response, _ := client.Organizations.ListMembers(org_name, options)
     allUsers = append(allUsers, users...)
     if response.NextPage == 0 {
       break
