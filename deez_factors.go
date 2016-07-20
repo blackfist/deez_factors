@@ -51,6 +51,7 @@ func main() {
     api_token := kingpin.Flag("token", "GitHub Personal API Token.").String()
     whitelist := kingpin.Flag("whitelist", "Path to whitelist file, does not print users in whitelist").String()
     use_env := kingpin.Flag("env", "Use the .env file or variable GITHUB_API_KEY.").Short('e').Bool()
+    filter := kingpin.Flag("disable-filter", "Disables the user filter").Short('d').Bool()
 
     kingpin.Parse()
 
@@ -75,6 +76,12 @@ func main() {
         }
     }
 
+    // If specified, remove the user filter, otherwise default to "2fa_disabled"
+    user_filter := ""
+    if !*filter {
+        user_filter = "2fa_disabled"
+    }
+
   // Authenticate to GitHub
   ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: *api_token})
   tc := oauth2.NewClient(oauth2.NoContext, ts)
@@ -86,7 +93,7 @@ func main() {
   // Need to use a loop because there may be multiple pages
   // of users.
   var allUsers []*github.User
-  options := &github.ListMembersOptions{Filter: "2fa_disabled"}
+  options := &github.ListMembersOptions{Filter: user_filter}
   for {
     users, response, _ := client.Organizations.ListMembers(*org_name, options)
     allUsers = append(allUsers, users...)
