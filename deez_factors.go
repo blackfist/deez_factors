@@ -80,7 +80,7 @@ func main() {
   // Get a list of org members that don't have 2FA enabled
   // Need to use a loop because there may be multiple pages
   // of users.
-  var allUsers []github.User
+  var allUsers []*github.User
   options := &github.ListMembersOptions{Filter: "2fa_disabled"}
   for {
     users, response, _ := client.Organizations.ListMembers(org_name, options)
