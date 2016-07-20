@@ -1,5 +1,18 @@
 package main
 
+// TODO: Add check for username or email to compare to whitelist
+// TODO: Update output
+// TODO: Allow for custom filter
+// TODO: Add check for site owner
+// TODO: Add warning if not owner of organization
+/* 
+> "https://api.github.com/orgs/optiv/members?filter=2fa_disabled"
+{
+  "message": "Only owners can use this filter.",
+  "documentation_url": "https://developer.github.com/v3/orgs/members/#audit-two-factor-auth"
+}
+*/
+
 import (
     "fmt"
     "os"
