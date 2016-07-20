@@ -1,48 +1,48 @@
 package main
 
 import (
-  "fmt"
-  "os"
-  "bufio"
-  "strings"
-  "github.com/joho/godotenv"
-  "github.com/google/go-github/github"
-  "golang.org/x/oauth2"
-  "gopkg.in/alecthomas/kingpin.v2"
+    "fmt"
+    "os"
+    "bufio"
+    "strings"
+    "github.com/joho/godotenv"
+    "github.com/google/go-github/github"
+    "golang.org/x/oauth2"
+    "gopkg.in/alecthomas/kingpin.v2"
 )
 
 func readWhitelist(path string) ([]string, error) {
-  var lines []string
-  file, err := os.Open(path)
+    var lines []string
+    file, err := os.Open(path)
 
-  // There might be a problem opening the file. If so,
-  // return the error
-  if err != nil {
-    return lines, err
-  }
-
-  // No error, so make sure we close the file when we're done
-  defer file.Close()
-
-  // Now read it into an array
-  scanner := bufio.NewScanner(file)
-  for scanner.Scan() {
-    if strings.HasPrefix(scanner.Text(), "#") {
-      // skip lines that start with #
-      continue
+    // There might be a problem opening the file. If so,
+    // return the error
+    if err != nil {
+        return lines, err
     }
-    lines = append(lines, scanner.Text())
-  }
-  return lines, nil
+
+    // No error, so make sure we close the file when we're done
+    defer file.Close()
+
+    // Now read it into an array
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        if strings.HasPrefix(scanner.Text(), "#") {
+            // skip lines that start with #
+            continue
+        }
+        lines = append(lines, scanner.Text())
+    }
+    return lines, nil
 }
 
 func checkWhiteList(name string, whitelist []string) (bool) {
-  for _, value := range whitelist {
-    if name == value {
-      return true
+    for _, value := range whitelist {
+        if name == value {
+            return true
+        }
     }
-  }
-  return false
+    return false
 }
 
 func main() {
@@ -82,41 +82,41 @@ func main() {
         user_filter = "2fa_disabled"
     }
 
-  // Authenticate to GitHub
-  ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: *api_token})
-  tc := oauth2.NewClient(oauth2.NoContext, ts)
+    // Authenticate to GitHub
+    ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: *api_token})
+    tc := oauth2.NewClient(oauth2.NoContext, ts)
 
-  // Create a GitHub client using the token from above
-  client := github.NewClient(tc)
+    // Create a GitHub client using the token from above
+    client := github.NewClient(tc)
 
-  // Get a list of org members that don't have 2FA enabled
-  // Need to use a loop because there may be multiple pages
-  // of users.
-  var allUsers []*github.User
-  options := &github.ListMembersOptions{Filter: user_filter}
-  for {
-    users, response, _ := client.Organizations.ListMembers(*org_name, options)
-    allUsers = append(allUsers, users...)
-    if response.NextPage == 0 {
-      break
+    // Get a list of org members that don't have 2FA enabled
+    // Need to use a loop because there may be multiple pages
+    // of users.
+    var allUsers []*github.User
+    options := &github.ListMembersOptions{Filter: user_filter}
+    for {
+        users, response, _ := client.Organizations.ListMembers(*org_name, options)
+        allUsers = append(allUsers, users...)
+        if response.NextPage == 0 {
+        break
+        }
+        options.ListOptions.Page = response.NextPage
     }
-    options.ListOptions.Page = response.NextPage
-  }
 
-  // Loop over the list of users and print their name
-  // User structs store values as pointers so we need to use
-  // the * to get the value
+    // Loop over the list of users and print their name
+    // User structs store values as pointers so we need to use
+    // the * to get the value
 
-  // Also need to use a different counter than the one that
-  // comes with range because otherwise when we skip
-  // whitelisted rows we end up with gaps in the numbers
-  counter := 1
-  for _, v := range allUsers {
-    // If the user is whitelisted, then move on
-    if (len(*whitelist) > 0) {
-      if checkWhiteList(*v.Login, wlist) {
-        continue
-      }
+    // Also need to use a different counter than the one that
+    // comes with range because otherwise when we skip
+    // whitelisted rows we end up with gaps in the numbers
+    counter := 1
+    for _, v := range allUsers {
+        // If the user is whitelisted, then move on
+        if (len(*whitelist) > 0) {
+            if checkWhiteList(*v.Login, wlist) {
+            continue
+        }
     }
     
     // Try to get more information about the user
