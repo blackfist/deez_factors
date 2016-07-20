@@ -2,14 +2,13 @@ package main
 
 import (
   "fmt"
-  "log"
   "os"
   "bufio"
   "strings"
-  "flag"
   "github.com/joho/godotenv"
   "github.com/google/go-github/github"
   "golang.org/x/oauth2"
+  "gopkg.in/alecthomas/kingpin.v2"
 )
 
 func readWhitelist(path string) ([]string, error) {
@@ -46,35 +45,41 @@ func checkWhiteList(name string, whitelist []string) (bool) {
   return false
 }
 
-
 func main() {
-  // load environment variables from .env and org from command line
+    // Command line arguments and flags
+    org_name := kingpin.Flag("org", "Name of the GitHub organization.").Required().String()
+    api_token := kingpin.Flag("token", "GitHub Personal API Token.").String()
+    whitelist := kingpin.Flag("whitelist", "Path to whitelist file, does not print users in whitelist").String()
+    use_env := kingpin.Flag("env", "Use the .env file or variable GITHUB_API_KEY.").Short('e').Bool()
 
-  flag.Parse()
-  if len(flag.Args()) == 0 {
-    fmt.Println("Why you no specify org name? Usage is \"deez_factors org\"")
-    os.Exit(1)
-  }
+    kingpin.Parse()
 
-  org_name := flag.Arg(0)
+    // Use either .env file or environment variable if GITHUB_API_KEY not provided
+    if *use_env {
+        err := godotenv.Load()
+        if err != nil {
+            fmt.Println("Unable to load .env file")
+        }
+        *api_token = os.Getenv("GITHUB_API_KEY")
+    } else if len(*api_token) == 0 {
+        fmt.Println("No GITHUB_API_KEY variable found")
+    }
 
-  err := godotenv.Load()
-  if err != nil {
-    log.Fatal("Error loading .env file")
-  }
+    // If supplied, read a list of users who are allowed to have 2FA turned off
+    // These users will not display on the program output
+    var wlist []string
+    if len(*whitelist) > 0 {
+        wlist, err := readWhitelist(*whitelist)
+        if wlist == nil || err != nil{
+            fmt.Println("Error reading whitelist: ", err, "-- proceeding with empty whitelist")
+        }
+    }
 
-  // read the whitelist of user names that are allowed to have
-  // 2FA turned off
-  whitelist, err := readWhitelist("whitelist.txt")
-  if err != nil {
-    log.Println("Error reading whitelist: ", err, "-- proceeding with empty whitelist")
-  }
-
-  //authenticate to github
-  ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: os.Getenv("GITHUB_API_KEY")})
+  // Authenticate to GitHub
+  ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: *api_token})
   tc := oauth2.NewClient(oauth2.NoContext, ts)
 
-  // create a github client using the token from above
+  // Create a GitHub client using the token from above
   client := github.NewClient(tc)
 
   // Get a list of org members that don't have 2FA enabled
@@ -83,7 +88,7 @@ func main() {
   var allUsers []*github.User
   options := &github.ListMembersOptions{Filter: "2fa_disabled"}
   for {
-    users, response, _ := client.Organizations.ListMembers(org_name, options)
+    users, response, _ := client.Organizations.ListMembers(*org_name, options)
     allUsers = append(allUsers, users...)
     if response.NextPage == 0 {
       break
@@ -101,9 +106,12 @@ func main() {
   counter := 1
   for _, v := range allUsers {
     // If the user is whitelisted, then move on
-    if checkWhiteList(*v.Login, whitelist) {
-      continue
+    if (len(*whitelist) > 0) {
+      if checkWhiteList(*v.Login, wlist) {
+        continue
+      }
     }
+    
     // Try to get more information about the user
     user, _, _ := client.Users.Get(*v.Login)
 
