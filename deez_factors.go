@@ -1,9 +1,9 @@
 package main
 
 // TODO: Add check for username or email to compare to whitelist
-// TODO: Update output
 // TODO: Allow for custom filter
 // TODO: Add check for site owner
+// TODO: Add option for output CSV
 // TODO: Add warning if not owner of organization
 /* 
 > "https://api.github.com/orgs/optiv/members?filter=2fa_disabled"
@@ -39,7 +39,7 @@ func readWhitelist(path string) ([]string, error) {
 
     // Now read it into an array
     scanner := bufio.NewScanner(file)
-    for scanner.Scan() {
+    for scanner.Scan() {  
         if strings.HasPrefix(scanner.Text(), "#") {
             // skip lines that start with #
             continue
@@ -59,7 +59,7 @@ func checkWhiteList(name string, whitelist []string) (bool) {
 }
 
 func main() {
-    // Command line arguments and flags
+    // Command line flags
     org_name := kingpin.Flag("org", "Name of the GitHub organization.").Required().String()
     api_token := kingpin.Flag("token", "GitHub Personal API Token.").String()
     whitelist := kingpin.Flag("whitelist", "Path to whitelist file, does not print users in whitelist").String()
@@ -71,12 +71,16 @@ func main() {
     // Use either .env file or environment variable if GITHUB_API_KEY not provided
     if *use_env {
         err := godotenv.Load()
-        if err != nil {
-            fmt.Println("Unable to load .env file")
-        }
         *api_token = os.Getenv("GITHUB_API_KEY")
+        
+        // Only warn the user if nothing is in .env or env
+        if err != nil && len(*api_token) == 0 {
+            fmt.Println("Unable to load env variable GITHUB_API_KEY")
+            os.Exit(1)
+        }
     } else if len(*api_token) == 0 {
-        fmt.Println("No GITHUB_API_KEY variable found")
+        fmt.Println("Invalid GITHUB_API_KEY value")
+        os.Exit(1)
     }
 
     // If supplied, read a list of users who are allowed to have 2FA turned off
@@ -111,48 +115,40 @@ func main() {
         users, response, _ := client.Organizations.ListMembers(*org_name, options)
         allUsers = append(allUsers, users...)
         if response.NextPage == 0 {
-        break
+            break
         }
         options.ListOptions.Page = response.NextPage
     }
 
-    // Loop over the list of users and print their name
-    // User structs store values as pointers so we need to use
-    // the * to get the value
-
-    // Also need to use a different counter than the one that
-    // comes with range because otherwise when we skip
-    // whitelisted rows we end up with gaps in the numbers
+    // Loop over list of users and print login, name and email (where available)
+    // Don't use golang's range counter because it will skip values for whitelisted users
     counter := 1
     for _, v := range allUsers {
+        // Default values for username and email
+        pubname := "N/A"
+        pubmail := "N/A"
+        
         // If the user is whitelisted, then move on
         if (len(*whitelist) > 0) {
             if checkWhiteList(*v.Login, wlist) {
-            continue
+                continue
+            }
         }
-    }
     
-    // Try to get more information about the user
-    user, _, _ := client.Users.Get(*v.Login)
+        // Query User API for more information on user
+        user, _, _ := client.Users.Get(*v.Login)
 
-    fmt.Printf("%02d: ", counter)
-    fmt.Print(*v.Login, " - ")
+        // Check if user has a name that is public
+        if user.Name != nil {
+            pubname = *user.Name
+        }
 
-    if user.Name != nil {
-      fmt.Print(*user.Name)
-    } else {
-      fmt.Print("No Public Name")
+        // Check if user has a email that is public
+        if user.Email != nil {
+            pubmail = *user.Email
+        }
+
+        fmt.Printf("%02d: %s (%s) - %s\n", counter, *user.Login, pubname, pubmail)
+        counter++
     }
-
-    fmt.Print(" - ")
-    if user.Email != nil {
-      fmt.Print(*user.Email)
-    } else {
-      fmt.Print("No Public Email")
-    }
-
-    fmt.Print("\n")
-    counter++
-  }
-
 }
