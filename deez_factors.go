@@ -1,9 +1,8 @@
 package main
 
-// TODO: Add check for username or email to compare to whitelist
-// TODO: Allow for custom filter
 // TODO: Add check for site owner
 // TODO: Add option for output CSV
+// TODO: Create generator for GitHub users
 // TODO: Add warning if not owner of organization
 /* 
 > "https://api.github.com/orgs/optiv/members?filter=2fa_disabled"
@@ -18,6 +17,7 @@ import (
     "os"
     "bufio"
     "strings"
+    "path/filepath"
     "github.com/joho/godotenv"
     "github.com/google/go-github/github"
     "golang.org/x/oauth2"
@@ -26,7 +26,8 @@ import (
 
 func readWhitelist(path string) ([]string, error) {
     var lines []string
-    file, err := os.Open(path)
+    absPath, _ := filepath.Abs(path)
+    file, err := os.Open(absPath)
 
     // There might be a problem opening the file. If so,
     // return the error
@@ -49,9 +50,9 @@ func readWhitelist(path string) ([]string, error) {
     return lines, nil
 }
 
-func checkWhiteList(name string, whitelist []string) (bool) {
+func checkWhiteList(check string, whitelist []string) (bool) {
     for _, value := range whitelist {
-        if name == value {
+        if strings.ToLower(check) == strings.ToLower(value) {
             return true
         }
     }
@@ -69,6 +70,7 @@ func main() {
     kingpin.Parse()
 
     // Use either .env file or environment variable if GITHUB_API_KEY not provided
+    // The flag -e overrides --token
     if *use_env {
         err := godotenv.Load()
         *api_token = os.Getenv("GITHUB_API_KEY")
@@ -81,16 +83,6 @@ func main() {
     } else if len(*api_token) == 0 {
         fmt.Println("Invalid GITHUB_API_KEY value")
         os.Exit(1)
-    }
-
-    // If supplied, read a list of users who are allowed to have 2FA turned off
-    // These users will not display on the program output
-    var wlist []string
-    if len(*whitelist) > 0 {
-        wlist, err := readWhitelist(*whitelist)
-        if wlist == nil || err != nil{
-            fmt.Println("Error reading whitelist: ", err, "-- proceeding with empty whitelist")
-        }
     }
 
     // If specified, remove the user filter, otherwise default to "2fa_disabled"
@@ -127,17 +119,10 @@ func main() {
         // Default values for username and email
         pubname := "N/A"
         pubmail := "N/A"
-        
-        // If the user is whitelisted, then move on
-        if (len(*whitelist) > 0) {
-            if checkWhiteList(*v.Login, wlist) {
-                continue
-            }
-        }
-    
+
         // Query User API for more information on user
         user, _, _ := client.Users.Get(*v.Login)
-
+        
         // Check if user has a name that is public
         if user.Name != nil {
             pubname = *user.Name
@@ -146,6 +131,18 @@ func main() {
         // Check if user has a email that is public
         if user.Email != nil {
             pubmail = *user.Email
+        }
+
+        // If the user is whitelisted, then do not print their info
+        if (len(*whitelist) > 0) {
+            // This may be bad for long lists beacuse we recheck at every iteration
+            wlist, err := readWhitelist(*whitelist)
+            
+            if wlist == nil || err != nil {
+                fmt.Println("Error reading whitelist: ", err)
+            } else if checkWhiteList(*user.Login, wlist) || checkWhiteList(pubmail, wlist) {
+                continue
+            }
         }
 
         fmt.Printf("%02d: %s (%s) - %s\n", counter, *user.Login, pubname, pubmail)
