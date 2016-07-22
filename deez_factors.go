@@ -2,14 +2,6 @@ package main
 
 // TODO: Add option for output CSV
 // TODO: Create generator for GitHub users
-// TODO: Add warning if not owner of organization
-/* 
-> "https://api.github.com/orgs/optiv/members?filter=2fa_disabled"
-{
-  "message": "Only owners can use this filter.",
-  "documentation_url": "https://developer.github.com/v3/orgs/members/#audit-two-factor-auth"
-}
-*/
 
 import (
     "fmt"
@@ -19,6 +11,7 @@ import (
     "path/filepath"
     "github.com/joho/godotenv"
     "github.com/google/go-github/github"
+    "github.com/fatih/color"
     "golang.org/x/oauth2"
     "gopkg.in/alecthomas/kingpin.v2"
 )
@@ -98,14 +91,15 @@ func main() {
     client := github.NewClient(tc)
 
     // Get a list of org members that don't have 2FA enabled
-    // Need to use a loop because there may be multiple pages
-    // of users.
+    // Need to loop through (potentially) multiple pages
     var allUsers []*github.User
     options := &github.ListMembersOptions{Filter: user_filter}
     for {
-        users, response, _ := client.Organizations.ListMembers(*org_name, options)
-        //fmt.Println(users)
-        //fmt.Println(response)
+        users, response, err := client.Organizations.ListMembers(*org_name, options)
+        if strings.Contains(strings.ToLower(err.Error()), "only owners") {
+            color.Yellow("Only owners can use the 2fa_disabled filter")
+            color.Yellow("See https://developer.github.com/v3/orgs/members/#audit-two-factor-auth")
+        }
         allUsers = append(allUsers, users...)
         if response.NextPage == 0 {
             break
