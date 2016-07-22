@@ -1,11 +1,16 @@
 # Deez Factors
-An audit tool to look for people in a GitHub organization with the primary purpose of locating users that do not have Two-factor authentication turned on. Now you can tell your users to "Get Deez Factors!"
+An audit tool written in Go to look for people in a GitHub organization with the primary purpose of locating users that do not have Two-factor authentication turned on. Now you can tell your users to "Get Deez Factors!"
 
 **Note:** In order to view users who have 2FA disabled, you must be an admin/owner of the organization for which you are checking. Refer to the GitHub API Documentation [audit-two-factor-auth](https://developer.github.com/v3/orgs/members/#audit-two-factor-auth).
 
 **Note:** In order to check the membership of users, you must belong to that organization. Refer to the GitHub API Documentation [get-organization-membership](https://developer.github.com/v3/orgs/members/#get-organization-membership)
 
 ## Usage
+
+```
+go install github.com/blackfist/deez_factors
+```
+
 ```
 $ ./deez_factors --help
 usage: deez_factors --org=ORG [<flags>]
