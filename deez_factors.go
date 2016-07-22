@@ -96,10 +96,13 @@ func main() {
     for {
         users, response, err := client.Organizations.ListMembers(*org_name, options)
         if err != nil {
-            if strings.Contains(strings.ToLower(err.Error()), "only owners") {
+            if strings.Contains(err.Error(), "401") {
+                color.Red("401 Unauthorized. Invalid token?")
+                os.Exit(1)
+            } else if strings.Contains(strings.ToLower(err.Error()), "only owners") {
                 color.Yellow("Only owners can use the 2fa_disabled filter")
                 color.Yellow("See https://developer.github.com/v3/orgs/members/#audit-two-factor-auth")
-            }
+            } 
         }
         allUsers = append(allUsers, users...)
         if response.NextPage == 0 {
