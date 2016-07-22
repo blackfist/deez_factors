@@ -2,6 +2,7 @@ package main
 
 // TODO: Add option for output CSV
 // TODO: Create generator for GitHub users
+// TODO: Add ability to enter custom filter
 
 import (
     "fmt"
@@ -21,13 +22,12 @@ func readWhitelist(path string) ([]string, error) {
     absPath, _ := filepath.Abs(path)
     file, err := os.Open(absPath)
 
-    // There might be a problem opening the file. If so,
-    // return the error
+    // Return error if there is a problem opening the file
     if err != nil {
         return lines, err
     }
 
-    // No error, so make sure we close the file when we're done
+    // Make sure we close the file when we're done
     defer file.Close()
 
     // Now read it into an array
@@ -52,10 +52,9 @@ func checkWhiteList(check string, whitelist []string) (bool) {
 }
 
 func main() {
-    // Command line flags
     org_name := kingpin.Flag("org", "Name of the GitHub organization.").Required().String()
     api_token := kingpin.Flag("token", "GitHub Personal API Token.").String()
-    whitelist := kingpin.Flag("whitelist", "Path to whitelist file, does not print users in whitelist").String()
+    whitelist := kingpin.Flag("whitelist", "Path to user whitelist file").String()
     use_env := kingpin.Flag("env", "Use the .env file or variable GITHUB_API_KEY.").Short('e').Bool()
     filter := kingpin.Flag("disable-filter", "Disables the user filter").Short('d').Bool()
 
@@ -96,9 +95,11 @@ func main() {
     options := &github.ListMembersOptions{Filter: user_filter}
     for {
         users, response, err := client.Organizations.ListMembers(*org_name, options)
-        if strings.Contains(strings.ToLower(err.Error()), "only owners") {
-            color.Yellow("Only owners can use the 2fa_disabled filter")
-            color.Yellow("See https://developer.github.com/v3/orgs/members/#audit-two-factor-auth")
+        if err != nil {
+            if strings.Contains(strings.ToLower(err.Error()), "only owners") {
+                color.Yellow("Only owners can use the 2fa_disabled filter")
+                color.Yellow("See https://developer.github.com/v3/orgs/members/#audit-two-factor-auth")
+            }
         }
         allUsers = append(allUsers, users...)
         if response.NextPage == 0 {
@@ -121,7 +122,7 @@ func main() {
 
         // Query Organization API for user membership
         membership, _, _ := client.Organizations.GetOrgMembership(*user.Login, *org_name)
-        if *membership.Role == "admin" {
+        if membership != nil && *membership.Role == "admin" {
             isAdmin = "[*]"
         }
         
