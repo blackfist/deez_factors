@@ -1,6 +1,5 @@
 package main
 
-// TODO: Add check for site owner
 // TODO: Add option for output CSV
 // TODO: Create generator for GitHub users
 // TODO: Add warning if not owner of organization
@@ -105,6 +104,8 @@ func main() {
     options := &github.ListMembersOptions{Filter: user_filter}
     for {
         users, response, _ := client.Organizations.ListMembers(*org_name, options)
+        //fmt.Println(users)
+        //fmt.Println(response)
         allUsers = append(allUsers, users...)
         if response.NextPage == 0 {
             break
@@ -119,9 +120,16 @@ func main() {
         // Default values for username and email
         pubname := "N/A"
         pubmail := "N/A"
+        isAdmin := "[ ]"
 
         // Query User API for more information on user
         user, _, _ := client.Users.Get(*v.Login)
+
+        // Query Organization API for user membership
+        membership, _, _ := client.Organizations.GetOrgMembership(*user.Login, *org_name)
+        if *membership.Role == "admin" {
+            isAdmin = "[*]"
+        }
         
         // Check if user has a name that is public
         if user.Name != nil {
@@ -145,7 +153,8 @@ func main() {
             }
         }
 
-        fmt.Printf("%02d: %s (%s) - %s\n", counter, *user.Login, pubname, pubmail)
+        fmt.Printf("%02d: %s %s (%s) - %s\n", counter, isAdmin, *user.Login, pubname, pubmail)
         counter++
     }
+    fmt.Println("* - denotes organization admin")
 }
